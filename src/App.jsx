@@ -322,10 +322,15 @@ export default function App() {
                   </button>
                 </div>
                 <div className="preview-pane">
-                   <h2 style={{ marginBottom: '1rem', fontSize: '1.25rem', color: 'var(--text-main)' }}>{activeNoteItem.name}</h2>
-                   <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', color: 'var(--text-muted)' }}>
-                      {activeNoteItem.notes}
-                   </div>
+                   <h2 style={{ marginBottom: '1rem', fontSize: '1.25rem', color: 'var(--text-main)', flexShrink: 0 }}>{activeNoteItem.name}</h2>
+                   <textarea
+                      className="preview-textarea"
+                      placeholder="Start typing your notes... (Saves automatically)"
+                      value={activeNoteItem.notes}
+                      onChange={(e) => {
+                        setItems(prevItems => prevItems.map(i => i.id === activeNoteItem.id ? { ...i, notes: e.target.value } : i));
+                      }}
+                   />
                 </div>
               </div>
             </div>
