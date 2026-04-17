@@ -55,6 +55,7 @@ body {
   font-weight: 600;
   background: linear-gradient(to right, #818CF8, #C084FC);
   -webkit-background-clip: text;
+  background-clip: text;
   color: transparent;
 }
 
@@ -64,21 +65,42 @@ body {
   overflow: hidden;
 }
 
-/* Columns container */
 .columns-container {
   display: flex;
   flex: 1;
   overflow-x: auto;
+  gap: 1px;
+  background-color: var(--border-color);
+}
+
+.column-wrapper {
+  display: flex;
+  position: relative;
+  flex-shrink: 0;
   background-color: var(--border-color);
 }
 
 .column {
   flex: 1;
-  min-width: 250px;
-  background-color: var(--bg-main);
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--border-color);
+  background-color: var(--bg-main);
+}
+
+.resizer {
+  position: absolute;
+  right: -3px;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  background-color: transparent;
+  z-index: 10;
+  transition: background-color 0.2s ease;
+}
+
+.resizer:hover, .resizer.is-resizing {
+  background-color: var(--accent);
 }
 
 .column-header {
@@ -121,6 +143,16 @@ body {
 .item-row.active {
   background-color: var(--bg-hover);
   border-left: 3px solid var(--accent);
+}
+
+.item-row.drag-over {
+  background-color: var(--bg-hover);
+  border: 2px dashed var(--accent);
+}
+
+.item-row.is-dragging {
+  opacity: 0.5;
+  background-color: var(--bg-hover);
 }
 
 .item-row:active {
