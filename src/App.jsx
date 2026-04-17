@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Folder, Map, Layers, Link as LinkIcon, Plus, Trash2 } from 'lucide-react';
+import { Folder, Map, Layers, Link as LinkIcon, Plus, Trash2, Edit2 } from 'lucide-react';
 import './index.css';
 
 const INITIAL_DATA = [
   { id: '1', type: 'project', name: 'Example Project', parentId: null },
   { id: '2', type: 'journey', name: 'Frontend Refactor', parentId: '1' },
   { id: '3', type: 'layer', name: 'UI Components', parentId: '2' },
-  { id: '4', type: 'detail', name: 'React Docs', url: 'https://react.dev', parentId: '3' },
+  { id: '4', type: 'detail', name: 'React Docs', url: 'https://react.dev', notes: 'Great place to look up hooks APIs', parentId: '3' },
 ];
 
 export default function App() {
@@ -16,17 +16,15 @@ export default function App() {
   });
 
   const [activeIds, setActiveIds] = useState({ project: null, journey: null, layer: null });
-  const [modalState, setModalState] = useState({ isOpen: false, type: null, parentId: null });
-  const [formData, setFormData] = useState({ name: '', url: '' });
+  const [modalState, setModalState] = useState({ isOpen: false, mode: 'create', type: null, parentId: null, editId: null });
+  const [formData, setFormData] = useState({ name: '', url: '', notes: '' });
 
-  // Resizer state
   const [resizing, setResizing] = useState(null);
   const [columnWidths, setColumnWidths] = useState(() => {
     const saved = localStorage.getItem('tab-saver-widths');
     return saved ? JSON.parse(saved) : { project: 250, journey: 250, layer: 250, detail: 300 };
   });
 
-  // Drag and Drop state
   const [draggedItem, setDraggedItem] = useState(null);
   const [dragOverId, setDragOverId] = useState(null);
 
@@ -38,7 +36,6 @@ export default function App() {
     localStorage.setItem('tab-saver-widths', JSON.stringify(columnWidths));
   }, [columnWidths]);
 
-  // Handle column resizing globally
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!resizing) return;
@@ -92,27 +89,41 @@ export default function App() {
     if (activeIds.layer === id) setActiveIds(prev => ({ ...prev, layer: null }));
   };
 
-  const handleAddSubmit = (e) => {
-    e.preventDefault();
-    if (!formData.name) return;
-    const newItem = {
-      id: Date.now().toString(),
-      type: modalState.type,
-      name: formData.name,
-      parentId: modalState.parentId,
-      ...(modalState.type === 'detail' && { url: formData.url })
-    };
-    setItems([...items, newItem]);
-    
-    if (modalState.type !== 'detail') {
-       handleSelect(newItem.id, modalState.type);
-    }
-    
-    setModalState({ isOpen: false, type: null, parentId: null });
-    setFormData({ name: '', url: '' });
+  const handleEditClick = (e, item) => {
+    e.stopPropagation();
+    setFormData({ name: item.name, url: item.url || '', notes: item.notes || '' });
+    setModalState({ isOpen: true, mode: 'edit', type: item.type, parentId: item.parentId, editId: item.id });
   };
 
-  // --- Drag and drop logic ---
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.name) return;
+    
+    if (modalState.mode === 'create') {
+      const newItem = {
+        id: Date.now().toString(),
+        type: modalState.type,
+        name: formData.name,
+        parentId: modalState.parentId,
+        ...(modalState.type === 'detail' && { url: formData.url, notes: formData.notes })
+      };
+      setItems([...items, newItem]);
+      
+      if (modalState.type !== 'detail') {
+         handleSelect(newItem.id, modalState.type);
+      }
+    } else {
+      // Edit logic
+      setItems(items.map(i => i.id === modalState.editId ? { 
+        ...i, 
+        name: formData.name, 
+        ...(modalState.type === 'detail' && { url: formData.url, notes: formData.notes }) 
+      } : i));
+    }
+    
+    setModalState({ isOpen: false, mode: 'create', type: null, parentId: null, editId: null });
+    setFormData({ name: '', url: '', notes: '' });
+  };
 
   const handleDragStart = (e, item) => {
     setDraggedItem(item);
@@ -177,8 +188,6 @@ export default function App() {
     setDragOverId(null);
   };
 
-  // ---------------------------
-
   const renderColumn = (title, type, parentId, IconComponent, activeId) => {
     const list = getChildren(parentId, type);
     const canAdd = parentId !== null || type === 'project';
@@ -198,7 +207,10 @@ export default function App() {
             {canAdd && (
               <button 
                 className="add-btn" 
-                onClick={() => setModalState({ isOpen: true, type, parentId })}
+                onClick={() => {
+                  setFormData({ name: '', url: '', notes: '' });
+                  setModalState({ isOpen: true, mode: 'create', type, parentId, editId: null });
+                }}
               >
                 <Plus size={16} />
               </button>
@@ -218,16 +230,30 @@ export default function App() {
                 onDragEnd={handleDragEnd}
               >
                 <div className="item-content">
-                  <IconComponent size={16} className="item-icon" style={{ opacity: 0.7 }} />
-                  <span className="item-name" title={item.name}>{item.name}</span>
+                  <IconComponent size={16} className="item-icon" style={{ opacity: 0.7, marginTop: '2px', flexShrink: 0 }} />
+                  <div className="item-text-container">
+                    <span className="item-name" title={item.name}>{item.name}</span>
+                    {item.type === 'detail' && item.notes && (
+                      <span className="item-notes" title={item.notes}>{item.notes}</span>
+                    )}
+                  </div>
                 </div>
-                <button 
-                  className="delete-btn" 
-                  onClick={(e) => deleteItem(item.id, e)}
-                  title="Delete"
-                >
-                  <Trash2 size={14} />
-                </button>
+                <div className="item-actions">
+                  <button 
+                    className="action-btn edit-btn" 
+                    onClick={(e) => handleEditClick(e, item)}
+                    title="Edit"
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                  <button 
+                    className="action-btn delete-btn" 
+                    onClick={(e) => deleteItem(item.id, e)}
+                    title="Delete"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -265,10 +291,13 @@ export default function App() {
       </main>
 
       {modalState.isOpen && (
-        <div className="modal-overlay" onClick={() => setModalState({ isOpen: false, type: null, parentId: null })}>
+        <div className="modal-overlay" onClick={() => setModalState({ isOpen: false, mode: 'create', type: null, parentId: null, editId: null })}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <h2>Add New {modalState.type.charAt(0).toUpperCase() + modalState.type.slice(1)}</h2>
-            <form onSubmit={handleAddSubmit}>
+            <h2>
+              {modalState.mode === 'create' ? 'Add New ' : 'Rename / Edit '}
+              {modalState.type.charAt(0).toUpperCase() + modalState.type.slice(1)}
+            </h2>
+            <form onSubmit={handleSubmit}>
               <input
                 autoFocus
                 className="input-field"
@@ -278,20 +307,28 @@ export default function App() {
                 required
               />
               {modalState.type === 'detail' && (
-                <input
-                  className="input-field"
-                  placeholder="URL (e.g. https://github.com)"
-                  type="url"
-                  value={formData.url}
-                  onChange={e => setFormData({ ...formData, url: e.target.value })}
-                  required
-                />
+                <>
+                  <input
+                    className="input-field"
+                    placeholder="URL (e.g. https://github.com)"
+                    type="url"
+                    value={formData.url}
+                    onChange={e => setFormData({ ...formData, url: e.target.value })}
+                    required
+                  />
+                  <textarea
+                    className="input-field"
+                    placeholder="Add optional notes or descriptions here..."
+                    value={formData.notes}
+                    onChange={e => setFormData({ ...formData, notes: e.target.value })}
+                  />
+                </>
               )}
               <div className="modal-actions">
                 <button 
                   type="button" 
                   className="btn btn-cancel"
-                  onClick={() => setModalState({ isOpen: false, type: null, parentId: null })}
+                  onClick={() => setModalState({ isOpen: false, mode: 'create', type: null, parentId: null, editId: null })}
                 >
                   Cancel
                 </button>

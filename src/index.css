@@ -161,14 +161,29 @@ body {
 
 .item-content {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   flex: 1;
   overflow: hidden;
 }
 
+.item-text-container {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .item-name {
   font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-notes {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -192,24 +207,30 @@ body {
   background-color: var(--bg-hover);
 }
 
-.delete-btn {
+.item-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.item-row:hover .item-actions {
+  opacity: 1;
+}
+
+.action-btn {
   background: none;
   border: none;
   color: var(--text-muted);
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
-  opacity: 0;
-  transition: opacity 0.2s, color 0.2s;
+  transition: color 0.2s, background-color 0.2s;
+  display: flex;
 }
 
-.item-row:hover .delete-btn {
-  opacity: 1;
-}
-
-.delete-btn:hover {
-  color: #EF4444;
-}
+.edit-btn:hover { color: var(--accent); }
+.delete-btn:hover { color: #EF4444; }
 
 /* Modal */
 .modal-overlay {
@@ -256,6 +277,12 @@ body {
 
 .input-field:focus {
   border-color: var(--accent);
+}
+
+textarea.input-field {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
 }
 
 .modal-actions {
