@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Folder, Map, Layers, Link as LinkIcon, Plus, Trash2, Edit2, FileText } from 'lucide-react';
+import { Folder, Map, Layers, Link as LinkIcon, Plus, Trash2, Edit2, FileText, Download, Upload } from 'lucide-react';
 import './index.css';
 
 const INITIAL_DATA = [
@@ -84,14 +84,51 @@ export default function App() {
     }
   };
 
-  const deleteItem = (id, e) => {
+  const deleteItem = (item, e) => {
     e.stopPropagation();
-    setItems(items.filter(i => i.id !== id));
+    if (!window.confirm(`Are you sure you want to delete "${item.name}"?`)) {
+      return;
+    }
+    setItems(items.filter(i => i.id !== item.id));
     
-    if (activeIds.project === id) setActiveIds({ project: null, journey: null, layer: null, detail: null });
-    if (activeIds.journey === id) setActiveIds(prev => ({ ...prev, journey: null, layer: null, detail: null }));
-    if (activeIds.layer === id) setActiveIds(prev => ({ ...prev, layer: null, detail: null }));
-    if (activeIds.detail === id) setActiveIds(prev => ({ ...prev, detail: null }));
+    if (activeIds.project === item.id) setActiveIds({ project: null, journey: null, layer: null, detail: null });
+    if (activeIds.journey === item.id) setActiveIds(prev => ({ ...prev, journey: null, layer: null, detail: null }));
+    if (activeIds.layer === item.id) setActiveIds(prev => ({ ...prev, layer: null, detail: null }));
+    if (activeIds.detail === item.id) setActiveIds(prev => ({ ...prev, detail: null }));
+  };
+
+  const handleExport = () => {
+    const dataStr = JSON.stringify(items, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `tab-saver-backup-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const importedItems = JSON.parse(event.target.result);
+        if (Array.isArray(importedItems)) {
+          if (window.confirm("Are you sure you want to completely overwrite your current data with this backup?")) {
+            setItems(importedItems);
+            setActiveIds({ project: null, journey: null, layer: null, detail: null });
+            e.target.value = null; // reset input
+          }
+        } else {
+          alert('Invalid backup file format.');
+        }
+      } catch (err) {
+        alert('Error parsing backup file. Make sure it is a valid JSON.');
+      }
+    };
+    reader.readAsText(file);
   };
 
   const handleEditClick = (e, item) => {
@@ -265,7 +302,7 @@ export default function App() {
                   </button>
                   <button 
                     className="action-btn delete-btn" 
-                    onClick={(e) => deleteItem(item.id, e)}
+                    onClick={(e) => deleteItem(item, e)}
                     title="Delete"
                   >
                     <Trash2 size={14} />
@@ -288,9 +325,20 @@ export default function App() {
   return (
     <div className="app-container">
       <header className="header">
-        <div className="header-title">Tab Saver</div>
-        <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-          Save CPU by closing tabs & organizing your links hierarchically. Let's drag & drop!
+        <div>
+          <div className="header-title">Tab Saver</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '4px' }}>
+            Save CPU by closing tabs & organizing your links hierarchically.
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button className="header-btn" onClick={handleExport} title="Download your data to a file">
+            <Download size={16} /> Export Backup
+          </button>
+          <label className="header-btn" title="Restore data from a JSON file" style={{ cursor: 'pointer' }}>
+            <Upload size={16} /> Import Backup
+            <input type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
+          </label>
         </div>
       </header>
 
